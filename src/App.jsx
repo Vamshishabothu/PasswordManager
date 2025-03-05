@@ -13,6 +13,17 @@ class App extends Component {
     username: '',
     password: '',
     isShow: false,
+    searchInput: '',
+  }
+
+  componentDidMount() {
+    // Load passwords from local storage when the component mounts
+    const storedPasswords = JSON.parse(localStorage.getItem('passwords')) || []
+    this.setState({latestList: storedPasswords, isTrue: storedPasswords.length > 0})
+  }
+
+  updateLocalStorage = passwords => {
+    localStorage.setItem('passwords', JSON.stringify(passwords))
   }
 
   listenWebsite = e => {
@@ -29,9 +40,15 @@ class App extends Component {
 
   addContent = e => {
     e.preventDefault()
-    const {username, website, password} = this.state
+    const {username, website, password, latestList} = this.state
+
+    if (website.trim() === '' || username.trim() === '' || password.trim() === '') {
+      return
+    }
+
     const initial = website.slice(0, 1).toUpperCase()
-    const classValue = colorList[Math.floor(Math.random() * 5)]
+    const classValue = colorList[Math.floor(Math.random() * colorList.length)]
+
     const newValues = {
       id: v4(),
       initialValue: initial,
@@ -40,22 +57,23 @@ class App extends Component {
       Password: password,
       classAdd: classValue,
     }
-    this.setState(prevState => ({
-      latestList: [...prevState.latestList, newValues],
+
+    const updatedList = [...latestList, newValues]
+
+    this.setState({
+      latestList: updatedList,
       website: '',
       username: '',
       password: '',
       isTrue: true,
       searchInput: '',
-    }))
+    })
+
+    this.updateLocalStorage(updatedList) // Save to local storage
   }
 
   showPassword = e => {
-    if (e.target.checked) {
-      this.setState({isShow: true})
-    } else {
-      this.setState({isShow: false})
-    }
+    this.setState({isShow: e.target.checked})
   }
 
   searchList = e => {
@@ -65,22 +83,20 @@ class App extends Component {
   deleteItem = id => {
     const {latestList} = this.state
     const newList = latestList.filter(eachValue => eachValue.id !== id)
-    const caseOf = newList.length !== 0
-    this.setState({latestList: newList, isTrue: caseOf})
+    const isNotEmpty = newList.length > 0
+
+    this.setState({latestList: newList, isTrue: isNotEmpty})
+
+    this.updateLocalStorage(newList) // Update local storage
   }
 
   render() {
-    const {website, username, password, latestList, isShow, searchInput} =
-      this.state
-    let {isTrue} = this.state
-    const newList = latestList.filter(eachValue =>
-      eachValue.websiteName.toLowerCase().includes(searchInput.toLowerCase()),
+    const {website, username, password, latestList, isShow, searchInput, isTrue} = this.state
+
+    const filteredList = latestList.filter(eachValue =>
+      eachValue.websiteName.toLowerCase().includes(searchInput.toLowerCase())
     )
-    if (newList.length === 0) {
-      isTrue = false
-    } else {
-      isTrue = true
-    }
+
     return (
       <div className="main-container">
         <img
@@ -153,7 +169,7 @@ class App extends Component {
           <div className="first-div">
             <div className="your-password">
               <h1 className="heading-name">Your Passwords</h1>
-              <p className="colored-text">{newList.length}</p>
+              <p className="colored-text">{filteredList.length}</p>
             </div>
             <div className="search-holder">
               <img
@@ -182,7 +198,7 @@ class App extends Component {
               Show Passwords
             </label>
           </div>
-          {!isTrue && (
+          {filteredList.length === 0 ? (
             <div className="empty-state">
               <img
                 src="https://assets.ccbp.in/frontend/react-js/no-passwords-img.png"
@@ -191,10 +207,9 @@ class App extends Component {
               />
               <p className="no-passwords">No Passwords</p>
             </div>
-          )}
-          {isTrue && (
+          ) : (
             <ul className="result-container">
-              {newList.map(eachValue => (
+              {filteredList.map(eachValue => (
                 <li className="item-list" id={eachValue.id} key={eachValue.id}>
                   <p className={`initial ${eachValue.classAdd}`}>
                     {eachValue.initialValue}
@@ -202,14 +217,15 @@ class App extends Component {
                   <div className="list-content">
                     <p className="website">{eachValue.websiteName}</p>
                     <p className="website">{eachValue.userName}</p>
-                    {!isShow && (
+                    {!isShow ? (
                       <img
                         src="https://assets.ccbp.in/frontend/react-js/password-manager-stars-img.png"
                         className="stars-image"
                         alt="stars"
                       />
+                    ) : (
+                      <p className="website">{eachValue.Password}</p>
                     )}
-                    {isShow && <p className="website">{eachValue.Password}</p>}
                   </div>
                   <button
                     type="button"
